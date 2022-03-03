@@ -1,5 +1,7 @@
 # README/MetadataS1
 
+__Disclaimer:__ this paper is currently under reveiw and being considered for publication. 
+
 The _DataS1_ repository contains all functions (in _R_ directory), simulation results (in _RData_) and a \textsf{R} script file for excecuting simulations and recreating results presented in _Appendix-S2.R_. 
 
 #### _R_ folder
