@@ -256,9 +256,10 @@ out %>% filter(param == "lambda[1]"| param == "lambda[2]") %>% data.frame
 #                              nburn = 70000, thin = 10)
 # end5 <- start5 - Sys.time()
 # 
+########################
+# Recreate Appendix S2 #
+########################
 
-# Recreate Appendix S2 
-## ----data-readin, echo = FALSE-------------------------------------------
 # load tidyverse 
 library(tidyverse)
 
@@ -408,7 +409,8 @@ scen_name <- c(rep(paste0("S", 1:5), each = 2))
 visits <- c(rep(c("N8", "N16"), 5))
 trt_vec <- paste(visits, scen_name, sep = "_")
 
-# create one big data frame for plotting
+# create one big data frame for plotting - 
+# calls plot_estimation_df
 df_all <- data.frame()
 for(i in 1:length(sim_list)){
   df_temp <- plot_estimation_df(sim_list[[i]], psi.vec = psi_mat[i,], 
@@ -632,18 +634,10 @@ df_converge <- converge_summ(sim_list = list(scen1_v8, scen1_v16,
                                              scen2_v8, scen2_v16, 
                                              scen3_v8, scen3_v16))
 psi_converge <- df_converge[order(df_converge$param), ] 
-
-print(xtable::xtable(psi_converge, caption = "Summary of MCMC convergence for each scenario/visit/model and parameter combination. The total number data sets that resulted in a fitted model that converged is shown in the rightmost column. The \\texttt{num\\_converged} also represents the total number of individual intervals plotted in Figures S1 and S2, as well as the number used in the denominator to create the overall average intervals for each scenario.", digits = 0), comment = FALSE, include.rownames = FALSE)
+psi_converge
 
 ## Setup for MLESite threshold comparison 
-# set inputs for using post processing functions
-z_cutoffs = c(0.01, 0.1, 0.05, 0.25, 
-              0.5, .75, 0.95, .99)
-NA_combine = TRUE
-add_alpha_vec = NULL
-spp = 1 
-title = NULL
-
+# set inputs for using simulation processing functions
 # set up scenario and visit lables
 scen_name <- c(rep(paste0("S", 1:5), each = 2))
 visits <- c(rep(c("8N", "16N"), 5))
@@ -726,34 +720,13 @@ mle_common <- df_plot %>% filter(trt %in% c("8N.S1", "16N.S1", "8N.S4",
   geom_vline(xintercept = c(2.5, 4.5)) + 
   theme_bw(base_size = 16) 
 
-## ----MLESite-plots, fig.cap = "Calculated decision rates for MLE site approach (50 datasets with n = 55 sites) for deciding rare species presence or absence. Each dot represents a calculated conditional proportion based on the true Z state for each site. Each box represents the scenario for different $p$-value cutoffs related to the null hypothesis test. A species is claimed present if the $p$-value less than $\\alpha$. Each column is the true $Z$-state and each row is the species site-level decision (correct decision about species presence in top left and about species absence in bottom right. We present a comparison of results among Scenarios 1, 4, and 5 for 8 vs. 16 visits. These scneario-visit combinations are reprsented on the x-axis (e.g., '8N.S1' reflects the results assuming data generating values for scenario 1 and 8 visits (8 nights of recording).", out.width="0.95\\linewidth", fig.height = 18, fig.width=15----
+## ----MLESite-plots Fig S3
 gridExtra::grid.arrange(mle_rare, mle_common)
 
 
-## ----bayes-decision_setup, 
+## ----Bayes-decision_setup, 
 # set inputs for using post processing functions
-NA_combine = TRUE
-add_alpha_vec = NULL
-spp = 1 
-title = NULL
-
-# set up scenario and visit lables
-scen_name <- c(rep(paste0("S", 1:5), each = 2))
-visits <- c(rep(c("8N", "16N"), 5))
-# setup decision df from 2sppCt model
-scen_name <- rep(paste0("S", 1:5), each = 2)
-visits <- rep(c("8N", "16N"), 5)
 z_cutoffs <- c(0.05, 0.25, 0.5, 0.75, 0.95)
-
-# create one big df 
-sim_list <- list(scen1_v8, scen1_v16, 
-                 scen2_v8, scen2_v16, 
-                 scen3_v8, scen3_v16, 
-                 scen4_v8, scen4_v16, 
-                 scen5_v8, scen5_v16)
-
-scen_name <- c(rep(paste0("S", 1:5), each = 2))
-visits <- c(rep(c("8N", "16N"), 5))
 
 # one data frame for summarizing results
 df_bayes <- data.frame()
@@ -816,7 +789,7 @@ df_bayes$decision_rule <- paste0("z_cutoff = ", df_bayes$z_cutoff)
 df_bayes$z_cutoff <- factor(paste0("z_cutoff = ", df_bayes$z_cutoff))
 
 
-## ----threshold-plots-----------------------------------------------------
+## ----threshold-plots Figs S4/S5
 # rare 2sppCt
 rare2spp <- df_bayes %>% filter(trt %in% c("8N.S1", "16N.S1", "8N.S4", 
                                            "16N.S4", "8N.S5", "16N.S5")) %>%
@@ -837,6 +810,7 @@ rare2spp <- df_bayes %>% filter(trt %in% c("8N.S1", "16N.S1", "8N.S4",
   ggtitle('2SppCt: Rare Species') + 
   geom_vline(xintercept = c(2.5, 4.5)) + 
   theme_bw(base_size = 16) 
+
 # rare remove 
 rare_rem <- df_bayes %>% filter(trt %in% c("8N.S1", "16N.S1", "8N.S4", 
                                            "16N.S4", "8N.S5", "16N.S5")) %>%
@@ -857,6 +831,7 @@ rare_rem <- df_bayes %>% filter(trt %in% c("8N.S1", "16N.S1", "8N.S4",
   ggtitle('Remove: Rare Species') + 
   geom_vline(xintercept = c(2.5, 4.5)) + 
   theme_bw(base_size = 16) 
+
 # common 2sppct
 common_2spp <- df_bayes %>% filter(trt %in% c("8N.S1", "16N.S1", "8N.S4", 
                                               "16N.S4", "8N.S5", "16N.S5")) %>%
@@ -901,25 +876,24 @@ common_rem <- df_bayes %>% filter(trt %in% c("8N.S1", "16N.S1", "8N.S4",
   theme_bw(base_size = 16) 
 
 
-## ----Remove-threshold-rare, fig.cap = "Calculated error rates for for deciding rare species presence or absence for the $2SppCt$ model (top plot) and $Remove$ model (bottom plot). Each dot represents a calculated conditional proportion based on the true $Z$ state for each site and simulatied dataset. A species is claimed present if $Pr(Z_{ik}= 1|y_{ijk}) \\geq z_{cutoff}$. True $Z$-state (column) and site-level decision (row) show the rate of (in)correct decision rates from each simulated dataset (50 datasets with n = 55 sites). Different colors represent the different $z_{cutoffs}$ investigated and scneario-visit combinations are reprsented on the x-axis (e.g., '8N.S1' reflects the results assuming data generating values for scenario 1 and 8 visits (8 nights of recording). The top plot", out.width="0.95\\linewidth", fig.height = 18, fig.width=15----
+## ----Remove-threshold-rare Fig S4
 gridExtra::grid.arrange(rare2spp, rare_rem)
 
 
-## ----Remove-threshold-common, fig.cap = "Calculated error rates for for deciding common species presence or absence for the $2SppCt$ model (top plot) and $Remove$ model (bottom plot). Each dot represents a calculated conditional proportion based on the true $Z$ state for each site and simulatied dataset. A species is claimed present if $Pr(Z_{ik}= 1|y_{ijk}) \\geq z_{cutoff}$. True $Z$-state (column) and site-level decision (row) show the rate of (in)correct decision rates from each simulated dataset (50 datasets with n = 55 sites). Different colors represent the different $z_{cutoffs}$ investigated and scneario-visit combinations are reprsented on the x-axis (e.g., '8N.S1' reflects the results assuming data generating values for scenario 1 and 8 visits (8 nights of recording). The top plot", out.width="0.95\\linewidth", fig.height = 18, fig.width=15----
+## ----Remove-threshold-common Fig S5
 gridExtra::grid.arrange(common_2spp, common_rem)
 
 
-## ----"optimal thresholds" presented in text
+# recreate Tables S3 and S4
+# with summary from "optimal thresholds" presented in text
 # set inputs for using post processing functions
-NA_combine = TRUE
-add_alpha_vec = NULL
-title = NULL
-
-# set up scenario and visit lables
+# set up scenario and visit labels
 scen_name <- c(rep(paste0("S", 1:5), each = 2))
 visits <- c(rep(c("8N", "16N"), 5))
 
+# MLESite results df 
 # create one big data frame from sim_list summaries
+# For MLESite results
 df_all <- data.frame()
 for(i in 1:length(sim_list)){
   out <- suppressMessages(
@@ -943,30 +917,13 @@ df_all$z_decision <- factor(df_all$z_decision)
 levels(df_all$z_decision) <- c("Claim Species Absent", "Claim Species Present")
 df_all$model <- "MLESite"
 
-# set inputs for using post processing functions
-z_cutoffs = c(0.01, 0.1, 0.05, 0.25, 
-              0.5, .75, 0.95, .99)
-NA_combine = TRUE
-add_alpha_vec = NULL
+# 2Sppct and Remove results
+# get one df to compare to MLESite results
 
-# set up scenario and visit lables
-scen_name <- c(rep(paste0("S", 1:5), each = 2))
-visits <- c(rep(c("8N", "16N"), 5))
-# setup decision df from 2sppCt model
-scen_name <- rep(paste0("S", 1:5), each = 2)
-visits <- rep(c("8N", "16N"), 5)
+# set z_cutoffs 
 z_cutoffs <- c(0.05, 0.25, 0.75, 0.95)
 
-# create one big df 
-sim_list <- list(scen1_v8, scen1_v16, 
-                 scen2_v8, scen2_v16, 
-                 scen3_v8, scen3_v16, 
-                 scen4_v8, scen4_v16, 
-                 scen5_v8, scen5_v16)
-
-scen_name <- c(rep(paste0("S", 1:5), each = 2))
-visits <- c(rep(c("8N", "16N"), 5))
-
+# initialize df
 df_bayes <- data.frame()
 
 for(i in 1:length(sim_list)){
@@ -1017,9 +974,6 @@ df_2SppCt <- df_Ctdet %>% dplyr::select(z_decide.dg, species,
                                         cond_prob_z, z_dg, scenario, z_decision, decision_rule, 
                                         trt, model)
 df_MLE2spp <- full_join(df_MLE, df_2SppCt)
-# nrow(df_MLE)
-# nrow(df_2SppCt)
-# nrow(df_MLE2spp)
 df_MLE2spp$decision_rule <- factor(df_MLE2spp$decision_rule, 
                                    levels = c("alpha = 0.05", 
                                               "alpha = 0.1", 
