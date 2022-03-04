@@ -1,9 +1,9 @@
-###############
-## Functions ##
-###############
+#####################################
+## Simulation Processing Functions ##
+#####################################
 
-# for nimble model output 
-
+# process results with a specific z_cutoff
+# for Bayesian models
 z_table_nimble <- function(sim_results, z_cutoff = 0.5){
   # filter to just look at Z states and estimates
   idx_z <- which(substring(sim_results$param, 1,1) == "Z")
@@ -19,7 +19,6 @@ z_table_nimble <- function(sim_results, z_cutoff = 0.5){
   n_spp <- max(sim_results$species)
   n_site <- nrow(sim_results)/(n_iter*n_spp)
   # use cutoff to create z-decision based on model, 
-  # could use mode, but that's same as 0.5, i think..
   sim_results$z_decision <- ifelse(sim_results$Mean > 
                                      z_cutoff, 1, 0)
   # create decision table categories--- decision.truth
@@ -33,7 +32,6 @@ z_table_nimble <- function(sim_results, z_cutoff = 0.5){
     summarise(count = length(z_decide.dg), 
               z_decision = unique(z_decision),
               z_dg = unique(truth), 
-              # prop = length(z_decide.dg)/n_site, 
               model = model[1])
   
   df_summ <- df_summ[order(df_summ$sim_iter), ]
@@ -45,14 +43,16 @@ z_table_nimble <- function(sim_results, z_cutoff = 0.5){
   # join with counts from 2x2 table
   df_out <- full_join(df_summ, df_summ_z)
   # find cond prob 
-  df_out$cond_prob_z <- ifelse(df_out$z_dg == 1, df_out$count/df_out$z_1, 
+  df_out$cond_prob_z <- ifelse(df_out$z_dg == 1, 
+                               df_out$count/df_out$z_1, 
                                df_out$count/df_out$z_0)
   return(df_out)
 }
 
-# for MLESite output 
-
-z_table_MLEsite <- function(sim_results, NA_combine = FALSE, add_alpha_vec = NULL){
+# process results from MLESite, with option to add 
+# more alpha-level decisions based on the LRT p-value
+z_table_MLEsite <- function(sim_results, NA_combine = FALSE, 
+                            add_alpha_vec = NULL){
   # create table for each iteration 
   # head(sim_results)
   if(is.null(add_alpha_vec)){
@@ -67,7 +67,6 @@ z_table_MLEsite <- function(sim_results, NA_combine = FALSE, add_alpha_vec = NUL
                                         species, 
                                         sim_iter, alpha) %>% 
       summarise(count = length(z_decide.dg), 
-                # got rid of z_decision b/c makes duplicates
                 z_dg = unique(Z_true), 
                 model = "MLESite", 
                 alpha = unique(alpha))
@@ -75,6 +74,7 @@ z_table_MLEsite <- function(sim_results, NA_combine = FALSE, add_alpha_vec = NUL
   } else {
     sim_results$z_decide.dg <- interaction(sim_results$Y_noFP_sl, 
                                            sim_results$Z_true)
+    # check...
     # car::some(sim_results)
     n_site <- nrow(sim_results)/(max(sim_results$sim_iter)*
                                    max(sim_results$species)*length(unique(sim_results$alpha)))
@@ -126,6 +126,7 @@ z_table_MLEsite <- function(sim_results, NA_combine = FALSE, add_alpha_vec = NUL
     } else {
       sim_results$z_decide.dg <- interaction(sim_results$Y_noFP_sl, 
                                              sim_results$Z_true)
+      # check...
       # car::some(sim_results)
       n_site <- nrow(sim_results)/(max(sim_results$sim_iter)*
                                      max(sim_results$species)*length(unique(sim_results$alpha)))
@@ -156,7 +157,10 @@ z_table_MLEsite <- function(sim_results, NA_combine = FALSE, add_alpha_vec = NUL
   return(df_out)
 }
 
-# create one big df with all models
+# apply results from a simulation run 
+# to the post processing functions for MLESite and 
+# Bayesian models, return one data frame with site-level 
+# decision summaries
 table_process <- function(sim_run, z_cutoff = 0.5, NA_combine = FALSE, 
                           add_alpha_vec = NULL){
   # set up data frame to summarize decision results
@@ -179,6 +183,9 @@ table_process <- function(sim_run, z_cutoff = 0.5, NA_combine = FALSE,
   return(df_out)
 }
 
+# function to create one big data frame with 
+# conditional probs for site-level decisions 
+# for MLESite and Bayesian approaches --- calls table process
 compare_threshold <- function(sim_run, z_cutoffs = c(0.5, 0.6, 0.7, 0.8), 
                               NA_combine = FALSE, add_alpha_vec = NULL) {
   df_compare <- data.frame()
@@ -196,51 +203,3 @@ compare_threshold <- function(sim_run, z_cutoffs = c(0.5, 0.6, 0.7, 0.8),
                    "MLESite_compare" = df_mle)
   return(out_list)
 }
-
-# #### development 
-# scen1_v16 <- readRDS("../RData/rds-files_may12/scen1_visits16.rds")
-# # set.seed(6121)
-# # test <- car::some(scen1_v16$MLESite)
-# # sim_results <- test
-# sim_results <- scen1_v16$MLESite
-# library(tidyverse)
-# # check
-# df_outNA <- z_table_MLEsite(sim_results, NA_combine = TRUE)
-# df_out <- z_table_MLEsite(sim_results, NA_combine = FALSE)
-# 
-# for(i in 1:50){
-#   test <- filter(df_out, species == 1, sim_iter == i, alpha == 0.05)  
-#   print(paste("iteration", i, "; nrow = ", nrow(test)))
-# }
-# 
-# filter(df_out, species == 1, sim_iter == 41, alpha == 0.05)
-# filter(df_outNA, species == 1, sim_iter == 41, alpha == 0.05)
-# # test table process
-# sim_run <- scen1_v16
-# 
-# tp_NA <- table_process(sim_run = sim_run, NA_combine = TRUE)
-# head(tp_NA)
-# tp <- table_process(sim_run = sim_run, NA_combine = FALSE)
-# head(tp)
-# # looks good
-# filter(tp_NA, species == 1, sim_iter == 41, 
-#        alpha == 0.05 | is.na(alpha) == TRUE)
-# filter(tp, species == 1, sim_iter == 41, 
-#        alpha == 0.05 | is.na(alpha) == TRUE)
-# 
-# # now try compare_threshold 
-# 
-# ct_NA <- compare_threshold(sim_run = sim_run, NA_combine = TRUE)
-# ct <- compare_threshold(sim_run = sim_run, NA_combine = FALSE)
-# 
-# filter(ct_NA$MLESite_compare, species == 1, sim_iter == 41, 
-#        alpha == 0.05 | is.na(alpha) == TRUE)
-# filter(ct$MLESite_compare, species == 1, sim_iter == 41, 
-#        alpha == 0.05 | is.na(alpha) == TRUE)
-# 
-# match <- filter(ct_NA$nimble_compare, species == 1, sim_iter == 41, 
-#        alpha == 0.05 | is.na(alpha) == TRUE) == filter(ct$nimble_compare, species == 1, sim_iter == 41, 
-#        alpha == 0.05 | is.na(alpha) == TRUE) 
-# sum(match == FALSE, na.rm = T)
-# 
-# # looks like everything is working! 

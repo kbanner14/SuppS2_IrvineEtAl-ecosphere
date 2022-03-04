@@ -1,18 +1,20 @@
-# mode
+# function to compute mode
 getmode <- function(v) {
   uniqv <- unique(v)
   uniqv[which.max(tabulate(match(v, uniqv)))]
 }
 
-# comma between r and simoutputFcn was giving us grief! 
-# model code - count detection with known theta
+###########################
+## 2SppCt NIMBLE model   ## 
+###########################
+
+# model code - 2sppCt with __known__ theta
 cd_nimble_ThetaKnown <- nimbleCode({
   
   # Assuming theta is known, read in as data
   #--------------------------------------------------------------
   # priors: independent on lambda and psi
   #--------------------------------------------------------------
-  #changing prior for Simulation 5 results only to see if helps?? from a shape =2 to shape =1
   for(k in 1:n.spp){
     lambda[k] ~ dgamma(shape = 2,
                        rate = 0.25)
@@ -30,9 +32,14 @@ cd_nimble_ThetaKnown <- nimbleCode({
     }
   }
   
-})# end model
+})
 
-# model code - independent vanilla occupancy models for 2 spp
+###################################
+## Standard occupancy model      ##
+##   in NIMBLE for both species  ##
+##  (estimated independently)    ## 
+###################################
+
 cd_nimble_OccupancyModel <- nimbleCode({
   #priors
   for(k in 1:n.spp){
@@ -47,17 +54,13 @@ cd_nimble_OccupancyModel <- nimbleCode({
     Spp2[i] ~ dbin(p[2]*Z[i,2], size=n.revisits)
   }
   
-})# end model
+})
 
-# thetas = matrix(c(.8,.2,.35,.65),nrow=2,=2,byrow=TRUE) 
-# n.sites1 = 5
-# n.sites2 = 50
-# n.visits = 3
-# psi.vec = c(.75,.25)
-# lambda.vec = c(1,2)
+#################################
+## Simulation wrapper function ##
+#################################
+# default args set for Scenario 1 
 
-# simulation function with defaults for scenario 1 from overleaf 
-# doc
 psi_cov_function <- function(n_iter, 
                              thetas = matrix(c(.9,.1,.35,.65),
                                              nrow=2,
@@ -70,7 +73,7 @@ psi_cov_function <- function(n_iter,
                              alpha_vec = c(0.05, 0.1, 0.15, 0.2), 
                              nburn = 2500, niter = 5000, thin = 5){
   
-  summ_out_CtDet<-summ_out_remove<-summ_out_naive<-summ_out_mlesite<-as.list(1:n_iter)
+  summ_out_CtDet <- summ_out_remove <- summ_out_naive <- summ_out_mlesite <- as.list(1:n_iter)
   
   for(i in 1:n_iter){
     sim_dat <- sim_data(n.sites1 = n.sites1,
@@ -85,14 +88,17 @@ psi_cov_function <- function(n_iter,
     n.sites.tot<-length(unique(sim_dat$MLE_Britzke_data$sites_ID))
     
     spp1 <- matrix(sim_dat$MLE_Britzke_data$Spp1_AutoIDs,
-                   nrow =  n.sites.tot, ncol = n.visits, byrow=TRUE)
+                   nrow =  n.sites.tot, ncol = n.visits, 
+                   byrow=TRUE)
     spp2 <- matrix(sim_dat$MLE_Britzke_data$Spp2_AutoIDs,
-                   nrow =  n.sites.tot, ncol = n.visits, byrow=TRUE)
+                   nrow =  n.sites.tot, ncol = n.visits, 
+                   byrow=TRUE)
     cd_data <- list(Spp1_AutoIDs = spp1,
                     Spp2_AutoIDs = spp2,
                     theta = thetas)
     
-    cd_constants <- list(n.sites =  n.sites.tot, n.revisits =  n.visits, n.spp = 2)
+    cd_constants <- list(n.sites =  n.sites.tot, 
+                         n.revisits =  n.visits, n.spp = 2)
     
     # initial values
     cd_inits <- function(spp1, spp2) {
@@ -141,12 +147,13 @@ psi_cov_function <- function(n_iter,
     }
     model1_sum$Rhat <- c(mat)
     
-    # capture
+    # summarize capture rates
     model1_sum <- model1_sum %>%
       mutate(
         capture = ifelse(`2.5%` <= truth & truth <= `97.5%`, 1, 0),
         cri_width = `97.5%` - `2.5%`,
-        mode = apply(do.call("rbind", cd_mcmc_simple), 2, function(x) getmode(x)),
+        mode = apply(do.call("rbind", cd_mcmc_simple), 2, 
+                     function(x) getmode(x)),
         
         # NAs for latent Zs
         capture = ifelse(grepl("Z", param), NA, capture),
@@ -174,7 +181,9 @@ psi_cov_function <- function(n_iter,
             sapply(., function(x) x[1])
         )
       ) %>%
-      dplyr::select(model, sim_iter, param, param_clean, species, site, everything())
+      dplyr::select(model, sim_iter, param, 
+                    param_clean, species, 
+                    site, everything())
     
     summ_out_CtDet[[i]] <- model1_sum
     
@@ -187,14 +196,16 @@ psi_cov_function <- function(n_iter,
     ambig_det <- test_df[,3:4]
     
     phi_mat <- t(thetas) # needed to define phi_mat
+    
+    # mle for species 1
     mle_spp1 <- mle_closedform_2spp(ambig_det = ambig_det, 
                                     phi_mat = phi_mat,
                                     z_vec = z_spp1, 
                                     n_visit = n.visits, 
                                     spp_idx = 1, 
                                     adjusted = TRUE)
-    # mle_spp1
-    # implement for species 2 
+   
+    # MLE for species 2 
     mle_spp2 <- mle_closedform_2spp(ambig_det = ambig_det, 
                                     phi_mat = phi_mat,
                                     z_vec = z_spp2, 
@@ -207,10 +218,13 @@ psi_cov_function <- function(n_iter,
                   n_visit = n.visits, spp_idx = 1)
     dh2 <- mle_dh(mle_output = mle_spp2,
                   n_visit = n.visits, spp_idx = 2)
-    dat_remove<-data.frame(Spp1 = rowSums(dh1$dh_remove), Spp2 = rowSums(dh2$dh_remove))
-    dat_naive<-data.frame(Spp1 = rowSums(dh1$dh_naive), Spp2 = rowSums(dh2$dh_naive))
-    cd_constants <- list(n.sites =  n.sites.tot, n.spp = 2, n.revisits = n.visits)
-    n.sites.tot<-length(unique(sim_dat$MLE_Britzke_data$sites_ID))
+    dat_remove <- data.frame(Spp1 = rowSums(dh1$dh_remove), 
+                             Spp2 = rowSums(dh2$dh_remove))
+    dat_naive <- data.frame(Spp1 = rowSums(dh1$dh_naive), 
+                            Spp2 = rowSums(dh2$dh_naive))
+    cd_constants <- list(n.sites =  n.sites.tot, n.spp = 2, 
+                         n.revisits = n.visits)
+    n.sites.tot <- length(unique(sim_dat$MLE_Britzke_data$sites_ID))
     
     # initial values
     cd_inits <- function(spp1,spp2) {
@@ -224,12 +238,13 @@ psi_cov_function <- function(n_iter,
            psi = psi_init)
     }
     
-    
     # fit the model in one-step
     cd_mcmc_naive <- nimbleMCMC(code = cd_nimble_OccupancyModel,
-                                data = list(Spp1=dat_naive$Spp1,Spp2=dat_naive$Spp2),
+                                data = list(Spp1 = dat_naive$Spp1,
+                                            Spp2 = dat_naive$Spp2),
                                 constants = cd_constants,
-                                inits = cd_inits(spp1=dat_naive$Spp1,spp2=dat_naive$Spp2),
+                                inits = cd_inits(spp1 = dat_naive$Spp1, 
+                                                 spp2 = dat_naive$Spp2),
                                 monitors = c("psi", "p", "Z"),
                                 thin = thin,
                                 niter = niter,
@@ -246,7 +261,8 @@ psi_cov_function <- function(n_iter,
       ) %>%
       dplyr::select(param, model, sim_iter, everything()) %>%
       mutate(
-        truth = c(sim_dat$MLE_Britzke_data$Z1, sim_dat$MLE_Britzke_data$Z2, 1-exp(-lambda.vec), psi.vec),
+        truth = c(sim_dat$MLE_Britzke_data$Z1, sim_dat$MLE_Britzke_data$Z2, 
+                  1 - exp(-lambda.vec), psi.vec),
         n_eff = effectiveSize(cd_mcmc_naive)
       )
     
@@ -292,20 +308,22 @@ psi_cov_function <- function(n_iter,
             sapply(., function(x) x[1])
         )
       ) %>%
-      dplyr::select(model, sim_iter, param, param_clean, species, site, everything())
+      dplyr::select(model, sim_iter, param, 
+                    param_clean, species, site, 
+                    everything())
     summ_out_naive[[i]] <- model2_sum
     
-    
     cd_mcmc_remove <- nimbleMCMC(code = cd_nimble_OccupancyModel,
-                                 data = list(Spp1=dat_remove$Spp1,Spp2=dat_remove$Spp2),
+                                 data = list(Spp1=dat_remove$Spp1, 
+                                             Spp2=dat_remove$Spp2),
                                  constants = cd_constants,
-                                 inits = cd_inits(spp1=dat_remove$Spp1,spp2=dat_remove$Spp2),
+                                 inits = cd_inits(spp1=dat_remove$Spp1, 
+                                                  spp2=dat_remove$Spp2),
                                  monitors = c("psi","p", "Z"),
                                  thin = thin,
                                  niter = niter,
                                  nburn = nburn, nchains = 3,
                                  samplesAsCodaMCMC = TRUE)
-    
     
     # summary dataframe
     tmp <- summary(cd_mcmc_remove)
@@ -363,7 +381,9 @@ psi_cov_function <- function(n_iter,
             sapply(., function(x) x[1])
         )
       ) %>%
-      dplyr::select(model, sim_iter, param, param_clean, species, site, everything())
+      dplyr::select(model, sim_iter, param, 
+                    param_clean, species, 
+                    site, everything())
     summ_out_remove[[i]] <- model3_sum
     
     # model 4
@@ -395,7 +415,8 @@ psi_cov_function <- function(n_iter,
       ) %>%
         mutate(
           sim_iter = i, 
-          species = c(rep(1, nrow(spp1$summ_df)), rep(2, nrow(spp2$summ_df))),
+          species = c(rep(1, nrow(spp1$summ_df)), 
+                      rep(2, nrow(spp2$summ_df))),
           siteID = rep(seq(1:sum(n.sites1,n.sites2)), 2),
           model = "MLESite"
         ) %>%
@@ -417,7 +438,10 @@ psi_cov_function <- function(n_iter,
       summ_df_naive <- do.call(rbind, summ_out_naive)
       summ_df_site <- do.call(rbind, summ_out_mlesite)
       
-      tmp <- list("CtDetection"=summ_df_ctdet,"Remove"= summ_df_rem,"Naive"=summ_df_naive, "MLESite" = summ_df_site)
+      tmp <- list("CtDetection" = summ_df_ctdet,
+                  "Remove" = summ_df_rem,
+                  "Naive" = summ_df_naive, 
+                  "MLESite" = summ_df_site)
       saveRDS(tmp, file = paste0("partial_runs_", i, ".rds"))
     }
   }
@@ -427,11 +451,14 @@ psi_cov_function <- function(n_iter,
   summ_df_naive <- do.call(rbind, summ_out_naive)
   summ_df_site <- do.call(rbind, summ_out_mlesite)
   
-  # return(tab)
-  return(list("CtDetection"=summ_df_ctdet,"Remove"= summ_df_rem,"Naive"=summ_df_naive, "MLESite" = summ_df_site))
+
+  return(list("CtDetection" = summ_df_ctdet,
+              "Remove" = summ_df_rem, 
+              "Naive" = summ_df_naive, 
+              "MLESite" = summ_df_site))
 }
 
-
+# fucntion to run MLESite simulation only
 MLESite_sim <- function(n_iter, 
                         thetas = matrix(c(.9,.1,.35,.65),
                                         nrow=2,
@@ -488,7 +515,8 @@ MLESite_sim <- function(n_iter,
         ) %>%
           mutate(
             sim_iter = i, 
-            species = c(rep(1, nrow(spp1$summ_df)), rep(2, nrow(spp2$summ_df))),
+            species = c(rep(1, nrow(spp1$summ_df)), 
+                        rep(2, nrow(spp2$summ_df))),
             siteID = rep(seq(1:sum(n.sites1,n.sites2)), 2),
             model = "MLESite"
           ) %>%
@@ -506,9 +534,5 @@ MLESite_sim <- function(n_iter,
   return(summ_df_site)
 }
 
-# mleSite_scen1 <- MLESite_sim(n_iter = 50) 
-
-# check that alpha is working as it should...
-# mleSite_scen1 %>% filter(siteID == 1 & species == 1)
 
 

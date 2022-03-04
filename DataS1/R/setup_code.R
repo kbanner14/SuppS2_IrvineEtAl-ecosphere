@@ -7,7 +7,7 @@
 ##Author: Wilson Wright
 ##R Version 3.5.1
 
-## Edited by KM Irvine to strip it down...
+## Edited by KM Irvine to strip it down for MLE vs. Bayes exploration 
 
 ##Description:
 #Setup code for running a small simulation study.
@@ -212,86 +212,3 @@ sim_summary <- function(sim_obj, psi1.true){
   out <- cbind(psi1.lwbnd, psi1.means, psi1.upbnd, psi1.cover)
   return(out)
 }
-
-#These were originally comparing 4 different models need to clean up
-#
-# #summary 2 for the species 1 activity rates in all models
-# sim_summary2 <- function(sim_obj, lambda1.true){
-#   keep1a <- sim_obj$fit.div == 0
-#
-#
-#   keep1b <- sim_obj$fit.tree[, 1] == 0
-#
-#
-#   keep1c <- sim_obj$fit.rhat[, 1] < 1.1
-#
-#
-#   keep1d <- sim_obj$fit.neff[, 1] > 400
-#
-#
-#   keep1 <- apply(cbind(keep1a, keep1b, keep1c, keep1d),
-#                  1, all)
-#
-#
-#   lambda1.means <- mean(sim_obj$store.fit1['lambda1', 'mean', keep1])
-#   lambda1.lwbnd <- mean(sim_obj$store.fit1['lambda1', 'q2.5', keep1])
-#   lambda1.upbnd <- mean(sim_obj$store.fit1['lambda1', 'q97.5', keep1])
-#   lambda1.cover <- mean(sim_obj$store.fit1['lambda1', 'q2.5', keep1] < lambda1.true &
-#                           sim_obj$store.fit1['lambda1', 'q97.5', keep1] > lambda1.true)
-#
-#   out <- cbind(lambda1.lwbnd, lambda1.means, lambda1.upbnd, lambda1.cover)
-#   return(out)
-# }
-#
-# #CI width comparisons
-# ci_widths <- function(sim_obj){
-#   keep1a <- sim_obj$fit.div[, 1] == 0
-#   keep2a <- sim_obj$fit.div[, 2] == 0
-#   keep3a <- sim_obj$fit.div[, 3] == 0
-#   keep4a <- sim_obj$fit.div[, 4] == 0
-#
-#   keep1b <- sim_obj$fit.tree[, 1] == 0
-#   keep2b <- sim_obj$fit.tree[, 2] == 0
-#   keep3b <- sim_obj$fit.tree[, 3] == 0
-#   keep4b <- sim_obj$fit.tree[, 4] == 0
-#
-#   keep1c <- sim_obj$fit.rhat[, 1] < 1.1
-#   keep2c <- sim_obj$fit.rhat[, 2] < 1.1
-#   keep3c <- sim_obj$fit.rhat[, 3] < 1.1
-#   keep4c <- sim_obj$fit.rhat[, 4] < 1.1
-#
-#   keep1d <- sim_obj$fit.neff[, 1] > 400
-#   keep2d <- sim_obj$fit.neff[, 2] > 400
-#   keep3d <- sim_obj$fit.neff[, 3] > 400
-#   keep4d <- sim_obj$fit.neff[, 4] > 400
-#
-#   keep1 <- apply(cbind(keep1a, keep1b, keep1c, keep1d),
-#                  1, all)
-#   keep2 <- apply(cbind(keep2a, keep2b, keep2c, keep2d),
-#                  1, all)
-#   keep3 <- apply(cbind(keep3a, keep3b, keep3c, keep3d),
-#                  1, all)
-#   keep4 <- apply(cbind(keep4a, keep4b, keep4c, keep4d),
-#                  1, all)
-#
-#   psi1.widths <- c(mean(sim_obj$store.fit1['psi1', 'q97.5', keep1] -
-#                           sim_obj$store.fit1['psi1', 'q2.5', keep1]),
-#                    mean(sim_obj$store.fit2['psi1', 'q97.5', keep2] -
-#                           sim_obj$store.fit2['psi1', 'q2.5', keep2]),
-#                    mean(sim_obj$store.fit3['psi1', 'q97.5', keep3] -
-#                           sim_obj$store.fit3['psi1', 'q2.5', keep3]),
-#                    mean(sim_obj$store.fit4['psi1', 'q97.5', keep4] -
-#                           sim_obj$store.fit4['psi1', 'q2.5', keep4]))
-#
-#   lambda1.widths <- c(mean(sim_obj$store.fit1['lambda1', 'q97.5', keep1] -
-#                              sim_obj$store.fit1['lambda1', 'q2.5', keep1]),
-#                       mean(sim_obj$store.fit2['lambda1', 'q97.5', keep2] -
-#                              sim_obj$store.fit2['lambda1', 'q2.5', keep2]),
-#                       mean(sim_obj$store.fit3['lambda1', 'q97.5', keep3] -
-#                              sim_obj$store.fit3['lambda1', 'q2.5', keep3]),
-#                       mean(sim_obj$store.fit4['lambda1', 'q97.5', keep4] -
-#                              sim_obj$store.fit4['lambda1', 'q2.5', keep4]))
-#
-#   out <- cbind(psi1.widths, lambda1.widths)
-#   return(out)
-# }
