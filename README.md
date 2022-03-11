@@ -1,6 +1,6 @@
 # README/MetadataS1
 
-__Disclaimer:__ this paper is currently under reveiw and being considered for publication. 
+__Disclaimer:__ this paper is currently under reveiw and being considered for publication. R statistical Software (R Core Team 2021) was used to write all code and for all statistical simulations (Any use of trade, firm, or product names is for descriptive purposes only and does not imply endorsement by the U.S. Government).
 
 The _DataS1_ repository contains all functions (in _R_ directory), simulation results (in _RData_) and a \textsf{R} script file for excecuting simulations and recreating results presented in _Appendix-S2.R_. 
 
